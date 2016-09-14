@@ -1,0 +1,88 @@
+#!/usr/bin/env ruby
+
+require "abstract_method"
+require "find"
+require "nokogiri"
+require "thor"
+require "http"
+
+class Bookmark
+    def initialize(name, url)
+        @name = name
+        @url = url
+    end
+
+    def is_stale()
+        http_client = HTTP.follow(true)
+        response = http_client.get(@url)
+        if response.code != 200
+            puts "#{@name} at #{@url} is stale, got HTTP response code #{response.code}"
+            return TRUE
+        end
+        return FALSE
+    end
+end
+
+class BookmarkHolder
+    def get_bookmarks()
+        return @bookmarks
+    end
+
+    abstract_method :remove_bookmark
+end
+
+class BookmarkHolderWebloc < BookmarkHolder
+    def initialize(filename)
+        @filename = filename
+        doc = File.open(filename) { |f| Nokogiri::XML(f) }
+        @bookmarks = [ Bookmark.new(File.basename(filename, File.extname(filename)), @url = doc.at_xpath('//dict/string').content) ]
+    end
+
+    def remove_bookmark(bookmark)
+        # .webloc files can only contain one bookmark
+        raise "Mismatching bookmark" unless bookmark == @bookmarks[0]
+        File.delete(@filename)
+        puts "Deleted #{@filename}"
+    end
+
+    def self.discover(inputdir)
+        bookmarkholders = []
+
+        Find.find(inputdir) { |file|
+            if File.extname(file) == ".webloc"
+                bookmarkholders << BookmarkHolderWebloc.new(file)
+            end
+        }
+
+        return bookmarkholders
+    end
+end
+
+class BookmarkToolbox < Thor
+    desc "findstale INPUTDIRS", "Find stale bookmarks in INPUTDIRS"
+    options :inputdirs => :string
+    method_option :delete, :aliases => "-d", :desc => "Delete/remove stale bookmarks", :type => :boolean
+    def findstale(inputdirs)
+        # FIXME: Find a way to make the input an array of directories
+        inputdirs = [ inputdirs ]
+
+        bookmarkholders = []
+        inputdirs.each { |inputdir|
+            bookmarkholders.concat(BookmarkHolderWebloc.discover(inputdir))
+        }
+
+        puts "Read #{bookmarkholders.length} bookmark holders"
+        delete_file = options[:delete]
+        bookmarkholders.each { |bookmarkholder|
+            bookmarkholder.get_bookmarks().each { |bookmark|
+                if bookmark.is_stale()
+                    if delete_file
+                        bookmarkholder.remove_bookmark(bookmark)
+                    end
+                end
+            }
+        }
+    end
+end
+
+BookmarkToolbox.start(ARGV)
