@@ -21,7 +21,7 @@ class Bookmark
         @url = url
     end
 
-    def is_stale()
+    def stale?()
         http_client = HTTP.follow(true)
         response = http_client.get(@url)
         if response.code != 200
@@ -117,7 +117,7 @@ class BookmarkToolbox < Thor
         delete_file = options[:delete]
         bookmarkholders.each { |bookmarkholder|
             bookmarkholder.get_bookmarks().each { |bookmark|
-                if bookmark.is_stale()
+                if bookmark.stale?()
                     if delete_file
                         bookmarkholder.remove_bookmark(bookmark)
                     end
