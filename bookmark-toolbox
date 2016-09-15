@@ -2,9 +2,18 @@
 
 require "abstract_method"
 require "find"
-require "nokogiri"
-require "thor"
 require "http"
+require "nokogiri"
+require "open-uri"
+require "thor"
+
+def internet_connection?
+    begin
+        true if open("http://www.google.com/")
+    rescue
+        false
+    end
+end
 
 class Bookmark
     def initialize(name, url)
@@ -96,6 +105,10 @@ class BookmarkToolbox < Thor
     options :inputdirs => :string
     method_option :delete, :aliases => "-d", :desc => "Delete/remove stale bookmarks", :type => :boolean
     def findstale(inputdirs)
+        if not internet_connection?()
+            abort "Internet connection not available; making stale check invalid. Aborting."
+        end
+
         # FIXME: Find a way to make the input an array of directories
 
         bookmarkholders = _getbookmarkholders([inputdirs])
