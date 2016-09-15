@@ -21,6 +21,14 @@ class Bookmark
         end
         return FALSE
     end
+
+    def get_name()
+        return @name
+    end
+
+    def get_url()
+        return @url
+    end
 end
 
 class BookmarkHolder
@@ -29,6 +37,7 @@ class BookmarkHolder
     end
 
     abstract_method :remove_bookmark
+    abstract_method :add_bookmark
 end
 
 class BookmarkHolderWebloc < BookmarkHolder
@@ -58,18 +67,37 @@ class BookmarkHolderWebloc < BookmarkHolder
     end
 end
 
+class BookmarkHolderIndex < BookmarkHolder
+    def initialize()
+        @bookmarks = []
+    end
+
+    def add_bookmark(bookmark)
+        @bookmarks.concat([bookmark])
+    end
+
+    def write_to_file(filename)
+        File.open(filename, 'w') { |file|
+            file.write("<html><body><ul>")
+            @bookmarks.each { |bookmark|
+                file.write("<li><a href='#{bookmark.get_url}'>#{bookmark.get_name}</a></li>\n")
+            }
+        }
+    end
+
+    def self.discover(inputdir)
+        raise "Discovery does not exist for index files"
+    end
+end
+
 class BookmarkToolbox < Thor
     desc "findstale INPUTDIRS", "Find stale bookmarks in INPUTDIRS"
     options :inputdirs => :string
     method_option :delete, :aliases => "-d", :desc => "Delete/remove stale bookmarks", :type => :boolean
     def findstale(inputdirs)
         # FIXME: Find a way to make the input an array of directories
-        inputdirs = [ inputdirs ]
 
-        bookmarkholders = []
-        inputdirs.each { |inputdir|
-            bookmarkholders.concat(BookmarkHolderWebloc.discover(inputdir))
-        }
+        bookmarkholders = _getbookmarkholders([inputdirs])
 
         puts "Read #{bookmarkholders.length} bookmark holders"
         delete_file = options[:delete]
@@ -82,6 +110,38 @@ class BookmarkToolbox < Thor
                 end
             }
         }
+    end
+
+    desc "convertto INPUTDIRS TYPE TARGET", "Convert bookmarks in INPUTDIRS to TYPE at TARGET"
+    options :inputdirs => :string
+    options :type => :string, :default => "index"
+    options :target => :string
+    def convertto(inputdirs, type, target)
+        raise "Type can only be 'index' right now" unless type == "index"
+
+        bookmarkholders = _getbookmarkholders([inputdirs])
+
+        bookmark_holder_index = BookmarkHolderIndex.new()
+
+        bookmarkholders.each { |bookmarkholder|
+            bookmarkholder.get_bookmarks().each { |bookmark|
+                bookmark_holder_index.add_bookmark(bookmark)
+            }
+        }
+
+        bookmark_holder_index.write_to_file(target)
+    end
+
+    no_commands do
+        def _getbookmarkholders(inputdirs)
+            bookmarkholders = []
+
+            inputdirs.each { |inputdir|
+                bookmarkholders.concat(BookmarkHolderWebloc.discover(inputdir))
+            }
+
+            return bookmarkholders
+        end
     end
 end
 
