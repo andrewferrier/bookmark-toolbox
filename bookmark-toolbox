@@ -82,6 +82,7 @@ class BookmarkHolderIndex < BookmarkHolder
             @bookmarks.each { |bookmark|
                 file.write("<li><a href='#{bookmark.get_url}'>#{bookmark.get_name}</a></li>\n")
             }
+            file.write("</ul></body></html>")
         }
     end
 
