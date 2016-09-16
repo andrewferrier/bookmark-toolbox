@@ -5,6 +5,7 @@ require "find"
 require "http"
 require "nokogiri"
 require "open-uri"
+require "pathname"
 require "thor"
 
 def internet_connection?
@@ -16,9 +17,10 @@ def internet_connection?
 end
 
 class Bookmark
-    def initialize(name, url)
+    def initialize(name, url, tags)
         @name = name
         @url = url
+        @tags = tags
     end
 
     def stale?()
@@ -43,6 +45,10 @@ class Bookmark
     def get_url()
         return @url
     end
+
+    def get_tags()
+        return @tags
+    end
 end
 
 class BookmarkHolder
@@ -55,10 +61,10 @@ class BookmarkHolder
 end
 
 class BookmarkHolderWebloc < BookmarkHolder
-    def initialize(filename)
+    def initialize(filename, tags)
         @filename = filename
         doc = File.open(filename) { |f| Nokogiri::XML(f) }
-        @bookmarks = [ Bookmark.new(File.basename(filename, File.extname(filename)), @url = doc.at_xpath('//dict/string').content) ]
+        @bookmarks = [ Bookmark.new(File.basename(filename, File.extname(filename)), doc.at_xpath('//dict/string').content, tags) ]
     end
 
     def remove_bookmark(bookmark)
@@ -73,7 +79,13 @@ class BookmarkHolderWebloc < BookmarkHolder
 
         Find.find(inputdir) { |file|
             if File.extname(file) == ".webloc"
-                bookmarkholders << BookmarkHolderWebloc.new(file)
+                dirname = File.dirname(file)
+                relative = Pathname.new(dirname).relative_path_from(Pathname.new(inputdir))
+                tags = []
+                relative.each_filename {|element|
+                    tags.concat([element])
+                }
+                bookmarkholders << BookmarkHolderWebloc.new(file, tags)
             end
         }
 
@@ -94,7 +106,7 @@ class BookmarkHolderIndex < BookmarkHolder
         File.open(filename, 'w') { |file|
             file.write("<html><body><ul>")
             @bookmarks.each { |bookmark|
-                file.write("<li><a href='#{bookmark.get_url}'>#{bookmark.get_name}</a></li>\n")
+                file.write("<li><a href='#{bookmark.get_url}'>#{bookmark.get_name}</a> #{bookmark.get_tags}</li>\n")
             }
             file.write("</ul></body></html>")
         }
