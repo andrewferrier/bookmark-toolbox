@@ -1,179 +1,169 @@
 #!/usr/bin/env ruby
 
-require "abstract_method"
-require "find"
-require "http"
-require "nokogiri"
-require "open-uri"
-require "pathname"
-require "thor"
+require 'abstract_method'
+require 'find'
+require 'http'
+require 'nokogiri'
+require 'open-uri'
+require 'pathname'
+require 'thor'
 
 def internet_connection?
-    begin
-        true if open("http://www.google.com/")
-    rescue
-        false
-    end
+  true if open('http://www.google.com/')
+rescue
+  false
 end
 
+# Represents a single abstract bookmark (i.e. one URL)
 class Bookmark
-    def initialize(name, url, tags)
-        @name = name
-        @url = url
-        @tags = tags
-    end
+  def initialize(name, url, tags)
+    @name = name
+    @url = url
+    @tags = tags
+  end
 
-    def stale?()
-        http_client = HTTP.follow(true)
-        begin
-            response = http_client.get(@url)
-            if response.code != 200
-                puts "#{@name} at #{@url} is stale, got HTTP response code #{response.code}"
-                return TRUE
-            end
-            return FALSE
-        rescue HTTP::ConnectionError
-            puts "#{@name} at #{@url} is stale, couldn't connect"
-            return FALSE
-        end
+  def stale?
+    http_client = HTTP.follow(true)
+    begin
+      response = http_client.get(@url)
+      if response.code != 200
+        puts "#{@name} at #{@url} is stale, got HTTP response code #{response.code}"
+        return TRUE
+      end
+      return FALSE
+    rescue HTTP::ConnectionError
+      puts "#{@name} at #{@url} is stale, couldn't connect"
+      return FALSE
     end
+  end
 
-    def get_name()
-        return @name
-    end
-
-    def get_url()
-        return @url
-    end
-
-    def get_tags()
-        return @tags
-    end
+  attr_reader :name
+  attr_reader :url
+  attr_reader :tags
 end
 
+# Represents an abstract concept of a group of bookmarks (not nestable)
 class BookmarkHolder
-    def get_bookmarks()
-        return @bookmarks
-    end
-
-    abstract_method :remove_bookmark
-    abstract_method :add_bookmark
+  abstract_method :remove_bookmark
+  abstract_method :add_bookmark
+  attr_reader :bookmarks
 end
 
+# Represents a .webloc file (a BookmarkHolder that can hold only one bookmark)
 class BookmarkHolderWebloc < BookmarkHolder
-    def initialize(filename, tags)
-        @filename = filename
-        doc = File.open(filename) { |f| Nokogiri::XML(f) }
-        @bookmarks = [ Bookmark.new(File.basename(filename, File.extname(filename)), doc.at_xpath('//dict/string').content, tags) ]
+  def initialize(filename, tags)
+    @filename = filename
+    doc = File.open(filename) { |f| Nokogiri::XML(f) }
+    @bookmarks = [Bookmark.new(File.basename(filename, File.extname(filename)), doc.at_xpath('//dict/string').content, tags)]
+  end
+
+  def remove_bookmark(bookmark)
+    # .webloc files can only contain one bookmark
+    raise 'Mismatching bookmark' unless bookmark == @bookmarks[0]
+    File.delete(@filename)
+    puts "Deleted #{@filename}"
+  end
+
+  def self.discover(inputdir)
+    bookmarkholders = []
+
+    Find.find(inputdir) do |file|
+      next unless File.extname(file) == '.webloc'
+      dirname = File.dirname(file)
+      relative = Pathname.new(dirname).relative_path_from(Pathname.new(inputdir))
+      tags = []
+      relative.each_filename do |element|
+        tags.concat([element])
+      end
+      bookmarkholders << BookmarkHolderWebloc.new(file, tags)
     end
 
-    def remove_bookmark(bookmark)
-        # .webloc files can only contain one bookmark
-        raise "Mismatching bookmark" unless bookmark == @bookmarks[0]
-        File.delete(@filename)
-        puts "Deleted #{@filename}"
-    end
-
-    def self.discover(inputdir)
-        bookmarkholders = []
-
-        Find.find(inputdir) { |file|
-            if File.extname(file) == ".webloc"
-                dirname = File.dirname(file)
-                relative = Pathname.new(dirname).relative_path_from(Pathname.new(inputdir))
-                tags = []
-                relative.each_filename {|element|
-                    tags.concat([element])
-                }
-                bookmarkholders << BookmarkHolderWebloc.new(file, tags)
-            end
-        }
-
-        return bookmarkholders
-    end
+    bookmarkholders
+  end
 end
 
+# Represents an .html file which is an index that can contain maintain
+# bookmarks. Intended to be "write-only".
 class BookmarkHolderIndex < BookmarkHolder
-    def initialize()
-        @bookmarks = []
-    end
+  def initialize
+    @bookmarks = []
+  end
 
-    def add_bookmark(bookmark)
-        @bookmarks.concat([bookmark])
-    end
+  def add_bookmark(bookmark)
+    @bookmarks.concat([bookmark])
+  end
 
-    def write_to_file(filename)
-        File.open(filename, 'w') { |file|
-            file.write("<html><body><ul>")
-            @bookmarks.each { |bookmark|
-                file.write("<li><a href='#{bookmark.get_url}'>#{bookmark.get_name}</a> #{bookmark.get_tags}</li>\n")
-            }
-            file.write("</ul></body></html>")
-        }
+  def write_to_file(filename)
+    File.open(filename, 'w') do |file|
+      file.write('<html><body><ul>')
+      @bookmarks.each do |bookmark|
+        file.write("<li><a href='#{bookmark.url}'>#{bookmark.name}</a> #{bookmark.tags}</li>\n")
+      end
+      file.write('</ul></body></html>')
     end
+  end
 
-    def self.discover(inputdir)
-        raise "Discovery does not exist for index files"
-    end
+  def self.discover(_inputdir)
+    raise 'Discovery does not exist for index files'
+  end
 end
 
+# General Thor class used to model the top-level behaviour of
+# bookmark-toolbox.
 class BookmarkToolbox < Thor
-    desc "findstale INPUTDIRS", "Find stale bookmarks in INPUTDIRS"
-    options :inputdirs => :string
-    method_option :delete, :aliases => "-d", :desc => "Delete/remove stale bookmarks", :type => :boolean
-    def findstale(inputdirs)
-        if not internet_connection?()
-            abort "Internet connection not available; making stale check invalid. Aborting."
-        end
-
-        # FIXME: Find a way to make the input an array of directories
-
-        bookmarkholders = _getbookmarkholders([inputdirs])
-
-        puts "Read #{bookmarkholders.length} bookmark holders"
-        delete_file = options[:delete]
-        bookmarkholders.each { |bookmarkholder|
-            bookmarkholder.get_bookmarks().each { |bookmark|
-                if bookmark.stale?()
-                    if delete_file
-                        bookmarkholder.remove_bookmark(bookmark)
-                    end
-                end
-            }
-        }
+  desc 'findstale INPUTDIRS', 'Find stale bookmarks in INPUTDIRS'
+  options inputdirs: :string
+  method_option :delete, aliases: '-d', desc: 'Delete/remove stale bookmarks', type: :boolean
+  def findstale(inputdirs)
+    unless internet_connection?
+      abort 'Internet connection not available; making stale check invalid. Aborting.'
     end
 
-    desc "convertto INPUTDIRS TYPE TARGET", "Convert bookmarks in INPUTDIRS to TYPE at TARGET"
-    options :inputdirs => :string
-    options :type => :string, :default => "index"
-    options :target => :string
-    def convertto(inputdirs, type, target)
-        raise "Type can only be 'index' right now" unless type == "index"
+    # FIXME: Find a way to make the input an array of directories
 
-        bookmarkholders = _getbookmarkholders([inputdirs])
+    bookmarkholders = _getbookmarkholders([inputdirs])
 
-        bookmark_holder_index = BookmarkHolderIndex.new()
+    puts "Read #{bookmarkholders.length} bookmark holders"
+    delete_file = options[:delete]
+    bookmarkholders.each do |bookmarkholder|
+      bookmarkholder.bookmarks.each do |bookmark|
+        next unless bookmark.stale?
+        bookmarkholder.remove_bookmark(bookmark) if delete_file
+      end
+    end
+  end
 
-        bookmarkholders.each { |bookmarkholder|
-            bookmarkholder.get_bookmarks().each { |bookmark|
-                bookmark_holder_index.add_bookmark(bookmark)
-            }
-        }
+  desc 'convertto INPUTDIRS TYPE TARGET', 'Convert bookmarks in INPUTDIRS to TYPE at TARGET'
+  options inputdirs: :string
+  options type: :string, default: 'index'
+  options target: :string
+  def convertto(inputdirs, type, target)
+    raise "Type can only be 'index' right now" unless type == 'index'
 
-        bookmark_holder_index.write_to_file(target)
+    bookmarkholders = _getbookmarkholders([inputdirs])
+
+    bookmark_holder_index = BookmarkHolderIndex.new
+
+    bookmarkholders.each do |bookmarkholder|
+      bookmarkholder.bookmarks.each do |bookmark|
+        bookmark_holder_index.add_bookmark(bookmark)
+      end
     end
 
-    no_commands do
-        def _getbookmarkholders(inputdirs)
-            bookmarkholders = []
+    bookmark_holder_index.write_to_file(target)
+  end
 
-            inputdirs.each { |inputdir|
-                bookmarkholders.concat(BookmarkHolderWebloc.discover(inputdir))
-            }
+  no_commands do
+    def _getbookmarkholders(inputdirs)
+      bookmarkholders = []
 
-            return bookmarkholders
-        end
+      inputdirs.each do |inputdir|
+        bookmarkholders.concat(BookmarkHolderWebloc.discover(inputdir))
+      end
+
+      bookmarkholders
     end
+  end
 end
 
 BookmarkToolbox.start(ARGV)
