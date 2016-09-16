@@ -23,12 +23,17 @@ class Bookmark
 
     def stale?()
         http_client = HTTP.follow(true)
-        response = http_client.get(@url)
-        if response.code != 200
-            puts "#{@name} at #{@url} is stale, got HTTP response code #{response.code}"
-            return TRUE
+        begin
+            response = http_client.get(@url)
+            if response.code != 200
+                puts "#{@name} at #{@url} is stale, got HTTP response code #{response.code}"
+                return TRUE
+            end
+            return FALSE
+        rescue HTTP::ConnectionError
+            puts "#{@name} at #{@url} is stale, couldn't connect"
+            return FALSE
         end
-        return FALSE
     end
 
     def get_name()
