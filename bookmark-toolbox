@@ -7,11 +7,29 @@ require 'nokogiri'
 require 'open-uri'
 require 'pathname'
 require 'thor'
+require 'zlib'
 
 def internet_connection?
   true if open('http://www.google.com/')
 rescue
   false
+end
+
+def transform_to_tagmap(bookmarks)
+  tagmap = {}
+
+  bookmarks.each do |bookmark|
+    tags = bookmark.tags
+    tags.each do |tag|
+      if tagmap.key?(tag)
+        tagmap[tag].concat([bookmark])
+      else
+        tagmap[tag] = [bookmark]
+      end
+    end
+  end
+
+  tagmap
 end
 
 # Represents a single abstract bookmark (i.e. one URL)
@@ -95,11 +113,23 @@ class BookmarkHolderIndex < BookmarkHolder
 
   def write_to_file(filename)
     File.open(filename, 'w') do |file|
-      file.write('<html><body><ul>')
-      @bookmarks.each do |bookmark|
-        file.write("<li><a href='#{bookmark.url}'>#{bookmark.name}</a> #{bookmark.tags}</li>\n")
+      file.write('<html><body><head>')
+      file.write('<style>.bookmarks { background-color: "gray" }</style>')
+      file.write('<script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>')
+      file.write('<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/css/bootstrap.min.css" integrity="sha384-2hfp1SzUoho7/TsGGGDaFdsuuDL0LX2hnUp6VkX3CUQ2K4K+xjboZdsXyp4oUHZj" crossorigin="anonymous">')
+      file.write('<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" integrity="sha384-VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" crossorigin="anonymous"></script>')
+      file.write('</head>')
+      tagmap = transform_to_tagmap(@bookmarks)
+      tagmap.each do | tag, bookmark_list |
+        crc_tag = 'z' + Zlib::crc32(tag).to_s
+        file.write("<a data-toggle='collapse' href='##{crc_tag}'>#{tag}</a>&nbsp;")
+        file.write("<div class='bookmarks collapse' id='#{crc_tag}'>")
+        bookmark_list.each do | bookmark |
+          file.write("<p><a href='#{bookmark.url}'>#{bookmark.name}</a></p>")
+        end
+        file.write("</div>")
       end
-      file.write('</ul></body></html>')
+      file.write('</body></html>')
     end
   end
 
