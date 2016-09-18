@@ -113,21 +113,25 @@ class BookmarkHolderIndex < BookmarkHolder
 
   def write_to_file(filename)
     File.open(filename, 'w') do |file|
-      file.write('<html><body><head>')
-      file.write('<style>.bookmarks { background-color: "gray" }</style>')
-      file.write('<script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>')
-      file.write('<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/css/bootstrap.min.css" integrity="sha384-2hfp1SzUoho7/TsGGGDaFdsuuDL0LX2hnUp6VkX3CUQ2K4K+xjboZdsXyp4oUHZj" crossorigin="anonymous">')
-      file.write('<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" integrity="sha384-VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" crossorigin="anonymous"></script>')
-      file.write('</head>')
+      file.write('<html><body><head>' \
+                 '<style>.bookmarks { background-color: "gray" }</style>' \
+                 '<script src="https://code.jquery.com/jquery-3.1.0.min.js" ' \
+                 'integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>' \
+                 '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/css/bootstrap.min.css" ' \
+                 'integrity="sha384-2hfp1SzUoho7/TsGGGDaFdsuuDL0LX2hnUp6VkX3CUQ2K4K+xjboZdsXyp4oUHZj" crossorigin="anonymous">' \
+                 '<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" ' \
+                 'integrity="sha384-VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" ' \
+                 'crossorigin="anonymous"></script>' \
+                 '</head>')
       tagmap = transform_to_tagmap(@bookmarks)
-      tagmap.each do | tag, bookmark_list |
-        crc_tag = 'z' + Zlib::crc32(tag).to_s
+      tagmap.each do |tag, bookmark_list|
+        crc_tag = 'z' + Zlib.crc32(tag).to_s
         file.write("<a data-toggle='collapse' href='##{crc_tag}'>#{tag}</a>&nbsp;")
         file.write("<div class='bookmarks collapse' id='#{crc_tag}'>")
-        bookmark_list.each do | bookmark |
+        bookmark_list.each do |bookmark|
           file.write("<p><a href='#{bookmark.url}'>#{bookmark.name}</a></p>")
         end
-        file.write("</div>")
+        file.write('</div>')
       end
       file.write('</body></html>')
     end
