@@ -1,0 +1,9 @@
+Package: bookmark-toolbox
+Version: <version_goes_here>
+Section: base
+Priority: optional
+Architecture: all
+Depends: ruby2.3
+Maintainer: Andrew Ferrier <andrew.ferrier@example.com>
+Description: Toolbox for working with bookmarks.
+ Toolbox for working with bookmarks.
