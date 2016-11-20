@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'bundler/setup'
+
 require 'abstract_method'
 require 'find'
 require 'http'
