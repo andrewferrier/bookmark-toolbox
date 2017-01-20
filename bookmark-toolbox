@@ -117,22 +117,27 @@ class BookmarkHolderIndex < BookmarkHolder
     File.open(filename, 'w') do |file|
       file.write('<html><head>' \
                  '<style>' +
-                 IO.read(File.dirname(__FILE__) + "/bookmark-toolbox.css") +
+                 IO.read(File.dirname(__FILE__) + '/bookmark-toolbox.css') +
                  '</style>' \
-                 '<script src="https://code.jquery.com/jquery-3.1.0.min.js" ' \
-                 'integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>' \
-                 '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/css/bootstrap.min.css" ' \
-                 'integrity="sha384-2hfp1SzUoho7/TsGGGDaFdsuuDL0LX2hnUp6VkX3CUQ2K4K+xjboZdsXyp4oUHZj" crossorigin="anonymous">' \
-                 '<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" ' \
-                 'integrity="sha384-VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" ' \
+                 '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" ' \
+                 'integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">' \
+                 '<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" ' \
+                 'integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" ' \
+                 'crossorigin="anonymous"></script>' \
+                 '<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" ' \
+                 'integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" ' \
+                 'crossorigin="anonymous"></script>' \
+                 '<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" ' \
+                 'integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" ' \
                  'crossorigin="anonymous"></script>' \
                  '</head><body><div class="bookmarks-container">')
       tagmap = transform_to_tagmap(@bookmarks)
       tagmap.each do |tag, bookmark_list|
         crc_tag = 'z' + Zlib.crc32(tag).to_s
         file.write("<span class='bookmark-tag'><span class='dropdown'>")
-        file.write("<button id='#{crc_tag}' class='btn btn-default dropdown-toggle' type='button' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true'>")
-        file.write("#{tag}")
+        file.write("<button id='#{crc_tag}' class='btn btn-default dropdown-toggle' type='button' data-toggle='dropdown' " \
+                   "aria-haspopup='true' aria-expanded='true'>")
+        file.write(tag.to_s)
         file.write("<span class='caret'></span></button>")
         file.write("<ul class='dropdown-menu' aria-labelledby='#{crc_tag}'>")
         bookmark_list.each do |bookmark|
