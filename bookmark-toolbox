@@ -130,12 +130,15 @@ class BookmarkHolderIndex < BookmarkHolder
       tagmap = transform_to_tagmap(@bookmarks)
       tagmap.each do |tag, bookmark_list|
         crc_tag = 'z' + Zlib.crc32(tag).to_s
-        file.write("<a data-toggle='collapse' class='bookmark-tag' href='##{crc_tag}'>#{tag}</a>&nbsp;")
-        file.write("<div class='bookmarks collapse' id='#{crc_tag}'>")
+        file.write("<span class='bookmark-tag'><span class='dropdown'>")
+        file.write("<button id='#{crc_tag}' class='btn btn-default dropdown-toggle' type='button' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true'>")
+        file.write("#{tag}")
+        file.write("<span class='caret'></span></button>")
+        file.write("<ul class='dropdown-menu' aria-labelledby='#{crc_tag}'>")
         bookmark_list.each do |bookmark|
-          file.write("<p><a href='#{bookmark.url}'>#{bookmark.name}</a></p>")
+          file.write("<li><a href='#{bookmark.url}'>#{bookmark.name}</a></li>")
         end
-        file.write('</div>')
+        file.write('</ul></span></span>')
       end
       file.write('</div></body></html>')
     end
