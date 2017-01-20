@@ -18,3 +18,6 @@ builddeb_real:
 	fakeroot chmod -R u=rwX,go=rX $(TEMPDIR)
 	fakeroot chmod -R u+x $(TEMPDIR)/usr/bin
 	fakeroot dpkg-deb --build $(TEMPDIR) .
+
+docker-build:
+	docker build -t andrewferrier/bookmark-toolbox .
