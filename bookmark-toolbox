@@ -51,8 +51,16 @@ class Bookmark
         return TRUE
       end
       return FALSE
+      # Since these may be temporary errors, we consider that the bookmark is
+      # not stale.
     rescue HTTP::ConnectionError
       puts "#{@name} at #{@url} is stale, couldn't connect"
+      return FALSE
+    rescue HTTP::Redirector::TooManyRedirectsError
+      puts "#{@name} at #{@url} went through too many directs"
+      return FALSE
+    rescue HTTP::StateError
+      puts "#{@name} at #{@url} - HTTP 'state error'"
       return FALSE
     end
   end
