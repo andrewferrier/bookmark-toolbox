@@ -113,6 +113,18 @@ end
 # Represents an .html file which is an index that can contain maintain
 # bookmarks. Intended to be "write-only".
 class BookmarkHolderIndex < BookmarkHolder
+  SCRIPTS = '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" ' \
+    'integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous"/>' \
+    '<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" ' \
+    'integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" ' \
+    'crossorigin="anonymous"></script>' \
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" ' \
+    'integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" ' \
+    'crossorigin="anonymous"></script>' \
+    '<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" ' \
+    'integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" ' \
+    'crossorigin="anonymous"></script>'.freeze
+
   def initialize
     @bookmarks = []
   end
@@ -126,38 +138,34 @@ class BookmarkHolderIndex < BookmarkHolder
       file.write('<html><head>' \
                  '<style>' +
                  IO.read(File.dirname(__FILE__) + '/bookmark-toolbox.css') +
-                 '</style>' \
-                 '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" ' \
-                 'integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">' \
-                 '<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" ' \
-                 'integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" ' \
-                 'crossorigin="anonymous"></script>' \
-                 '<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" ' \
-                 'integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" ' \
-                 'crossorigin="anonymous"></script>' \
-                 '<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" ' \
-                 'integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" ' \
-                 'crossorigin="anonymous"></script>' \
+                 '</style>' +
+                 SCRIPTS +
                  '</head><body>' \
                  '<p>Generated on ' + Time.now.utc.iso8601 +
                  '<div class="bookmarks-container">')
       tagmap = transform_to_tagmap(@bookmarks)
       tagmap.each do |tag, bookmark_list|
-        crc_tag = 'z' + Zlib.crc32(tag).to_s
-        file.write("<span class='bookmark-tag'><span class='dropdown'>")
-        file.write("<button id='#{crc_tag}' class='btn btn-default dropdown-toggle' type='button' data-toggle='dropdown' " \
-                   "aria-haspopup='true' aria-expanded='true'>")
-        file.write(tag.to_s)
-        file.write("<span class='caret'></span></button>")
-        file.write("<ul class='dropdown-menu' aria-labelledby='#{crc_tag}'>")
-        bookmark_list.each do |bookmark|
-          file.write("<li><a href='#{bookmark.url}'>#{bookmark.name}</a></li>")
-        end
-        file.write('</ul></span></span>')
+        write_to_file_tag(file, tag, bookmark_list)
       end
       file.write('</div></body></html>')
     end
   end
+
+  def write_to_file_tag(file, tag, bookmark_list)
+    crc_tag = 'z' + Zlib.crc32(tag).to_s
+    file.write("<span class='bookmark-tag'><span class='dropdown'>")
+    file.write("<button id='#{crc_tag}' class='btn btn-default dropdown-toggle' type='button' data-toggle='dropdown' " \
+               "aria-haspopup='true' aria-expanded='true'>")
+    file.write(tag.to_s)
+    file.write("<span class='caret'></span></button>")
+    file.write("<ul class='dropdown-menu' aria-labelledby='#{crc_tag}'>")
+    bookmark_list.each do |bookmark|
+      file.write("<li><a href='#{bookmark.url}'>#{bookmark.name}</a></li>")
+    end
+    file.write('</ul></span></span>')
+  end
+
+  private :write_to_file_tag
 
   def self.discover(_inputdir)
     raise 'Discovery does not exist for index files'
