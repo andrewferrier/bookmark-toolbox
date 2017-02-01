@@ -6,7 +6,9 @@ Rake::TestTask.new do |t|
   t.verbose = true
 end
 
-task default: :rubocop
+task default: :make
+
+task make: [:rubocop, :scss]
 
 task :rubocop do
   sh 'rubocop'
