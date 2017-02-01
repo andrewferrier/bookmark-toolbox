@@ -141,28 +141,33 @@ class BookmarkHolderIndex < BookmarkHolder
                  '</style>' +
                  SCRIPTS +
                  '</head><body>' \
-                 '<p>Generated on ' + Time.now.utc.iso8601 +
                  '<div class="bookmarks-container">')
       tagmap = transform_to_tagmap(@bookmarks)
       tagmap.each do |tag, bookmark_list|
         write_to_file_tag(file, tag, bookmark_list)
       end
-      file.write('</div></body></html>')
+      file.write('</div></div>' \
+                 '<div class="generated">Generated on ' + Time.now.utc.iso8601 + '</div>' \
+                 '</body></html>')
     end
   end
 
   def write_to_file_tag(file, tag, bookmark_list)
     crc_tag = 'z' + Zlib.crc32(tag).to_s
+
+    file.write("<div class='btn-group'>")
     file.write("<span class='bookmark-tag'><span class='dropdown'>")
-    file.write("<button id='#{crc_tag}' class='btn btn-default dropdown-toggle' type='button' data-toggle='dropdown' " \
+    file.write("<button id='#{crc_tag}' class='btn btn-sm btn-secondary dropdown-toggle' type='button' data-toggle='dropdown' " \
                "aria-haspopup='true' aria-expanded='true'>")
     file.write(tag.to_s)
     file.write("<span class='caret'></span></button>")
-    file.write("<ul class='dropdown-menu' aria-labelledby='#{crc_tag}'>")
+    file.write("<div class='dropdown-menu' aria-labelledby='#{crc_tag}'>")
     bookmark_list.each do |bookmark|
-      file.write("<li><a href='#{bookmark.url}'>#{bookmark.name}</a></li>")
+      file.write("<a class='dropdown-item' href='#{bookmark.url}'>#{bookmark.name}</a>")
+      file.write("<div class='dropdown-divider'></div>")
     end
-    file.write('</ul></span></span>')
+    file.write('</div></span></span>')
+    file.write('</div>')
   end
 
   private :write_to_file_tag
