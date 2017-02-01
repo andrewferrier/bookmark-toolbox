@@ -2,8 +2,8 @@ language: ruby
 rvm:
   - 2.2
 script:
+  - rake
   - rake test
-  - rake rubocop
 notifications:
   email:
     recipients:
