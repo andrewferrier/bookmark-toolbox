@@ -7,6 +7,7 @@ require 'find'
 require 'http'
 require 'nokogiri'
 require 'open-uri'
+require 'parallel'
 require 'pathname'
 require 'thor'
 require 'zlib'
@@ -183,6 +184,9 @@ class BookmarkToolbox < Thor
   desc 'findstale INPUTDIRS', 'Find stale bookmarks in INPUTDIRS'
   options inputdirs: :string
   method_option :delete, aliases: '-d', desc: 'Delete/remove stale bookmarks', type: :boolean
+
+  PROCESS_INCREMENT = 50
+
   def findstale(inputdirs)
     unless internet_connection?
       abort 'Internet connection not available; making stale check invalid. Aborting.'
@@ -194,7 +198,10 @@ class BookmarkToolbox < Thor
 
     puts "Read #{bookmarkholders.length} bookmark holders"
     delete_file = options[:delete]
-    bookmarkholders.each do |bookmarkholder|
+    Parallel.each_with_index(bookmarkholders, in_processes: 10) do |bookmarkholder, index|
+      if (index % PROCESS_INCREMENT).zero?
+        puts PROCESS_INCREMENT.to_s + ' more bookmark holders processed'
+      end
       bookmarkholder.bookmarks.each do |bookmark|
         next unless bookmark.stale?
         bookmarkholder.remove_bookmark(bookmark) if delete_file
