@@ -46,21 +46,21 @@ class Bookmark
     http_client = HTTP.follow(true)
     begin
       response = http_client.get(@url)
-      if response.code != 200
+      if response.code == 404 || response.code == 410
         puts "#{@name} at #{@url} is stale, got HTTP response code #{response.code}"
         return TRUE
+      elsif response.code != 200
+        puts "#{@name} at #{@url} got unusual HTTP response code #{response.code}, marking as not stale"
       end
       return FALSE
-      # Since these may be temporary errors, we consider that the bookmark is
-      # not stale.
     rescue HTTP::ConnectionError
-      puts "#{@name} at #{@url} is stale, couldn't connect"
+      puts "#{@name} at #{@url} couldn't connect, marking as not stale"
       return FALSE
     rescue HTTP::Redirector::TooManyRedirectsError
-      puts "#{@name} at #{@url} went through too many directs"
+      puts "#{@name} at #{@url} went through too many directs, marking as not stale"
       return FALSE
     rescue HTTP::StateError
-      puts "#{@name} at #{@url} - HTTP 'state error'"
+      puts "#{@name} at #{@url} - HTTP 'state error', marking as not stale"
       return FALSE
     end
   end
