@@ -1,6 +1,6 @@
 # bookmark-toolbox
 
-[![Travis CI Status](https://travis-ci.org/andrewferrier/bookmark-toolbox.svg?branch=master)](https://travis-ci.org/andrewferrier/bookmark-toolbox)
+⚠️ DEPRECATED: This repository is deprecated, as I don't use bookmark-toolbox any more or have the time to maintain it. For now, it will remain here in case anyone wishes to fork and maintain it.
 
 Generic command-line toolbox tool for bookmarks. Currently this is very limited, but it is planned to add more capabilities.
 
